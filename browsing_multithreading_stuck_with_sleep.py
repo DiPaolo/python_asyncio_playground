@@ -7,21 +7,21 @@ from asyncio import Queue
 from typing import Optional
 
 from selenium import webdriver
-from selenium.common import NoSuchElementException, ElementNotInteractableException
-from selenium.webdriver import ActionChains
+from selenium.common import NoSuchElementException
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
-from selenium.webdriver.remote.webdriver import WebDriver as WebDriver
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.wait import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
-
-
 
 BASE_URL = 'https://ru.wikipedia.org/wiki/'
 URLS_TO_PARSE = list()
 
 WORKERS_CUR_IDX = dict()
+
+# WEB_DRIVER_CREATE_FUNCTIONS = [
+#     webdriver.Safari(),
+#     webdriver.Chrome(service=Service(ChromeDriverManager().install()))
+# ]
 
 # Create a queue that we will use to store our "workload".
 queue = Optional[Queue]
@@ -63,6 +63,9 @@ def parse_page(driver, url: str, worker_idx, screenshots_dir):
     except NoSuchElementException:
         article_exists = True
 
+    if worker_idx == 2:
+        time.sleep(30)
+
     if article_exists:
         link_elems = driver.find_elements(By.XPATH, "//div[@id='mw-content-text']//a")
         print(f"{'      ' * worker_idx}{worker_idx}::{url} link count={len(link_elems)}", flush=True)
@@ -83,7 +86,9 @@ def parse_page(driver, url: str, worker_idx, screenshots_dir):
 
 
 async def worker(worker_idx, queue):
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
+    options = Options()
+    # options.headless = True
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
     driver.set_window_size(1280, 720)
 
@@ -117,7 +122,7 @@ async def main():
 
     # Create three worker tasks to process the queue concurrently.
     tasks = []
-    for i in range(4):
+    for i in range(3):
         WORKERS_CUR_IDX[i] = 0
         task = asyncio.create_task(worker(i, queue))
         tasks.append(task)
